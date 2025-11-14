@@ -55,7 +55,7 @@ const Index = () => {
             <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center">
               <Store className="h-6 w-6 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold">My Store</h1>
+            <h1 className="text-2xl font-bold">cartX</h1>
           </div>
           <CartDrawer />
         </div>
@@ -64,7 +64,7 @@ const Index = () => {
       <main className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Welcome to Our Store
+            Welcome to cartX
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Discover amazing products at great prices
