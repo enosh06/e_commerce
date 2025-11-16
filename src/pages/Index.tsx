@@ -114,8 +114,7 @@ const Index = () => {
                     {product.node.description}
                   </p>
                   <p className="text-xl font-bold text-primary">
-                    {product.node.priceRange.minVariantPrice.currencyCode}{' '}
-                    {parseFloat(product.node.priceRange.minVariantPrice.amount).toFixed(2)}
+                    ₹{parseFloat(product.node.priceRange.minVariantPrice.amount).toFixed(2)}
                   </p>
                 </CardContent>
                 <CardFooter className="p-4 pt-0">

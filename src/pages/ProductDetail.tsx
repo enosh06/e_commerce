@@ -168,7 +168,7 @@ const ProductDetail = () => {
             <div>
               <h1 className="text-4xl font-bold mb-2">{product.node.title}</h1>
               <p className="text-3xl font-bold text-primary">
-                {selectedVariant.price.currencyCode} {parseFloat(selectedVariant.price.amount).toFixed(2)}
+                ₹{parseFloat(selectedVariant.price.amount).toFixed(2)}
               </p>
             </div>
 
