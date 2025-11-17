@@ -1,17 +1,27 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { ShoppingCart, Store, Loader2 } from "lucide-react";
+import { ShoppingCart, Store, Loader2, User, LogOut, Shield } from "lucide-react";
 import { CartDrawer } from "@/components/CartDrawer";
 import { useCartStore } from "@/stores/cartStore";
 import { ShopifyProduct, fetchProducts } from "@/lib/shopify";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Index = () => {
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const addItem = useCartStore(state => state.addItem);
+  const { user, isAdmin, signOut } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -57,7 +67,37 @@ const Index = () => {
             </div>
             <h1 className="text-2xl font-bold">cartX</h1>
           </div>
-          <CartDrawer />
+          <div className="flex items-center gap-4">
+            <CartDrawer />
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/admin')}>
+                        <Shield className="mr-2 h-4 w-4" />
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={signOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="ghost" onClick={() => navigate('/auth')}>
+                Sign In
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
