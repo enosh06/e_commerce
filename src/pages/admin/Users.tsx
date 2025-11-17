@@ -41,13 +41,12 @@ const AdminUsers = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        method: 'GET',
+      });
 
       if (error) throw error;
-      setUsers(data || []);
+      setUsers(data.users || []);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -65,10 +64,10 @@ const AdminUsers = () => {
 
   const handleRoleChange = async (userId: string, newRole: 'admin' | 'user') => {
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .update({ role: newRole })
-        .eq('user_id', userId);
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        method: 'PUT',
+        body: { userId, role: newRole },
+      });
 
       if (error) throw error;
 

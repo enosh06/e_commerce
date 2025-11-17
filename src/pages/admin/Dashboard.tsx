@@ -25,13 +25,13 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const { count: userCount } = await supabase
-          .from('user_roles')
-          .select('*', { count: 'exact', head: true });
+        const { data, error } = await supabase.functions.invoke('admin-stats');
+
+        if (error) throw error;
 
         setStats({
-          totalUsers: userCount || 0,
-          totalOrders: 0,
+          totalUsers: data.totalUsers || 0,
+          totalOrders: data.totalOrders || 0,
         });
       } catch (error) {
         console.error('Error fetching stats:', error);
