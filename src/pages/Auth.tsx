@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { Progress } from '@/components/ui/progress';
 import { z } from 'zod';
 
 const authSchema = z.object({
@@ -24,9 +25,57 @@ const authSchema = z.object({
     .regex(/[0-9]/, { message: 'Password must contain at least one number' }),
 });
 
+// Common weak passwords to check against
+const commonPasswords = [
+  'password', '123456', '12345678', 'qwerty', 'abc123', 'monkey', '1234567',
+  'letmein', 'trustno1', 'dragon', 'baseball', 'iloveyou', 'master', 'sunshine',
+  'ashley', 'bailey', 'passw0rd', 'shadow', '123123', '654321', 'superman',
+  'qazwsx', 'michael', 'football'
+];
+
+const calculatePasswordStrength = (pwd: string): { score: number; feedback: string; color: string } => {
+  let score = 0;
+  
+  if (pwd.length === 0) return { score: 0, feedback: '', color: 'bg-muted' };
+  if (pwd.length < 8) return { score: 20, feedback: 'Too short', color: 'bg-destructive' };
+  
+  // Check against common passwords
+  if (commonPasswords.includes(pwd.toLowerCase())) {
+    return { score: 20, feedback: 'Common password - easily guessed', color: 'bg-destructive' };
+  }
+  
+  // Length bonus
+  score += Math.min(pwd.length * 4, 40);
+  
+  // Character variety
+  if (/[a-z]/.test(pwd)) score += 10;
+  if (/[A-Z]/.test(pwd)) score += 10;
+  if (/[0-9]/.test(pwd)) score += 10;
+  if (/[^a-zA-Z0-9]/.test(pwd)) score += 20;
+  
+  // Bonus for mixing character types
+  const hasLower = /[a-z]/.test(pwd);
+  const hasUpper = /[A-Z]/.test(pwd);
+  const hasNumber = /[0-9]/.test(pwd);
+  const hasSpecial = /[^a-zA-Z0-9]/.test(pwd);
+  const varietyCount = [hasLower, hasUpper, hasNumber, hasSpecial].filter(Boolean).length;
+  score += varietyCount * 5;
+  
+  // Penalty for repeating characters
+  if (/(.)\1{2,}/.test(pwd)) score -= 10;
+  
+  score = Math.min(Math.max(score, 0), 100);
+  
+  if (score < 40) return { score, feedback: 'Weak password', color: 'bg-destructive' };
+  if (score < 60) return { score, feedback: 'Fair password', color: 'bg-yellow-500' };
+  if (score < 80) return { score, feedback: 'Good password', color: 'bg-blue-500' };
+  return { score, feedback: 'Strong password', color: 'bg-green-500' };
+};
+
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, feedback: '', color: 'bg-muted' });
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const { user, signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -76,6 +125,17 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check password strength before validation
+    if (passwordStrength.score < 40) {
+      toast({
+        title: 'Weak Password',
+        description: 'Please choose a stronger password for better security',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     if (!validateForm()) {
       toast({
         title: 'Validation Error',
@@ -170,12 +230,25 @@ const Auth = () => {
                     type="password"
                     value={password}
                     onChange={(e) => {
-                      setPassword(e.target.value);
+                      const newPassword = e.target.value;
+                      setPassword(newPassword);
+                      setPasswordStrength(calculatePasswordStrength(newPassword));
                       setErrors((prev) => ({ ...prev, password: undefined }));
                     }}
                     required
                     minLength={8}
                   />
+                  {password && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">Password strength:</span>
+                        <span className={passwordStrength.score >= 60 ? 'text-foreground' : 'text-destructive'}>
+                          {passwordStrength.feedback}
+                        </span>
+                      </div>
+                      <Progress value={passwordStrength.score} className="h-2" />
+                    </div>
+                  )}
                   {errors.password && (
                     <p className="text-sm text-destructive">{errors.password}</p>
                   )}
