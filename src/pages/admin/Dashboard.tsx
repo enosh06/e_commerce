@@ -60,6 +60,9 @@ const AdminDashboard = () => {
             <Button variant="outline" onClick={() => navigate('/')}>
               Back to Store
             </Button>
+            <Button variant="outline" onClick={() => navigate('/admin/products')}>
+              Manage Products
+            </Button>
             <Button variant="outline" onClick={() => navigate('/admin/users')}>
               Manage Users
             </Button>
