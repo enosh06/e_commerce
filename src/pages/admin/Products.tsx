@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
 import { fetchShopifyProducts, ShopifyProductAdmin } from '@/lib/shopifyAdmin';
 
 const AdminProducts = () => {
@@ -32,6 +33,8 @@ const AdminProducts = () => {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [sku, setSku] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -62,16 +65,51 @@ const AdminProducts = () => {
     }
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
+      let imageUrl = '';
+      
+      // Upload image to storage if provided
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(filePath, imageFile);
+
+        if (uploadError) {
+          throw new Error(`Failed to upload image: ${uploadError.message}`);
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+
+        imageUrl = publicUrl;
+      }
+
       // Here you would integrate with Shopify API to create product
       // For now, we'll show a success message
       toast({
         title: 'Product Added',
-        description: `${title} has been added successfully`,
+        description: `${title} has been added successfully${imageUrl ? ' with image' : ''}`,
       });
 
       // Reset form
@@ -79,13 +117,15 @@ const AdminProducts = () => {
       setDescription('');
       setPrice('');
       setSku('');
+      setImageFile(null);
+      setImagePreview(null);
       setDialogOpen(false);
       fetchProducts();
     } catch (error) {
       console.error('Error adding product:', error);
       toast({
         title: 'Error',
-        description: 'Failed to add product',
+        description: error instanceof Error ? error.message : 'Failed to add product',
         variant: 'destructive',
       });
     } finally {
@@ -138,6 +178,27 @@ const AdminProducts = () => {
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleAddProduct} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="product-image">Product Image</Label>
+                  <div className="space-y-2">
+                    <Input
+                      id="product-image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
+                    {imagePreview && (
+                      <div className="border rounded-lg p-2 bg-secondary/20">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="w-full h-48 object-contain rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="title">Product Title *</Label>
                   <Input
