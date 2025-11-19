@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Package, Plus, ArrowLeft } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Package, Plus, ArrowLeft, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,12 +17,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { fetchShopifyProducts, ShopifyProductAdmin } from '@/lib/shopifyAdmin';
 
 const AdminProducts = () => {
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<ShopifyProductAdmin[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -46,12 +48,16 @@ const AdminProducts = () => {
 
   const fetchProducts = async () => {
     try {
-      // This is a placeholder - you'll need to implement Shopify product fetching
-      // For now, we'll just set an empty array
-      setProducts([]);
+      const shopifyProducts = await fetchShopifyProducts();
+      setProducts(shopifyProducts);
       setLoadingProducts(false);
     } catch (error) {
       console.error('Error fetching products:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch products from Shopify',
+        variant: 'destructive',
+      });
       setLoadingProducts(false);
     }
   };
@@ -90,7 +96,7 @@ const AdminProducts = () => {
   if (loading || loadingProducts) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -216,23 +222,97 @@ const AdminProducts = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {products.map((product) => (
-                  <div
-                    key={product.id}
-                    className="border rounded-lg p-4 flex items-center justify-between"
-                  >
-                    <div>
-                      <h3 className="font-semibold">{product.title}</h3>
-                      <p className="text-sm text-muted-foreground">{product.sku}</p>
+                {products.map((product) => {
+                  const hasStock = product.totalInventory > 0;
+                  const inStock = product.variants.edges.some(v => v.node.availableForSale);
+                  
+                  return (
+                    <div
+                      key={product.id}
+                      className="border rounded-lg p-4 hover:border-primary/50 transition-colors"
+                    >
+                      <div className="flex gap-4">
+                        {/* Product Image */}
+                        {product.images.edges[0]?.node && (
+                          <div className="w-20 h-20 bg-secondary/20 rounded-md overflow-hidden flex-shrink-0">
+                            <img
+                              src={product.images.edges[0].node.url}
+                              alt={product.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Product Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg mb-1">{product.title}</h3>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                                {product.description || 'No description'}
+                              </p>
+                              
+                              {/* Stock Status */}
+                              <div className="flex items-center gap-2 mb-2">
+                                {inStock ? (
+                                  <Badge variant="default" className="flex items-center gap-1">
+                                    <CheckCircle className="h-3 w-3" />
+                                    In Stock ({product.totalInventory} units)
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive" className="flex items-center gap-1">
+                                    <XCircle className="h-3 w-3" />
+                                    Out of Stock
+                                  </Badge>
+                                )}
+                                <Badge variant="outline">
+                                  {product.variants.edges.length} variant{product.variants.edges.length !== 1 ? 's' : ''}
+                                </Badge>
+                              </div>
+                            </div>
+                            
+                            {/* Price and Actions */}
+                            <div className="text-right">
+                              <p className="text-lg font-bold mb-2">
+                                {product.priceRange.minVariantPrice.currencyCode}{' '}
+                                {parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2)}
+                              </p>
+                              <Button variant="outline" size="sm">
+                                View Details
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          {/* Variants Summary */}
+                          {product.variants.edges.length > 0 && (
+                            <div className="mt-3 pt-3 border-t">
+                              <p className="text-xs text-muted-foreground mb-2">Variants:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {product.variants.edges.slice(0, 4).map((variant) => (
+                                  <Badge 
+                                    key={variant.node.id} 
+                                    variant={variant.node.availableForSale ? "secondary" : "outline"}
+                                    className="text-xs"
+                                  >
+                                    {variant.node.title}
+                                    {variant.node.quantityAvailable !== null && (
+                                      <span className="ml-1">({variant.node.quantityAvailable})</span>
+                                    )}
+                                  </Badge>
+                                ))}
+                                {product.variants.edges.length > 4 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{product.variants.edges.length - 4} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold">${product.price}</p>
-                      <Button variant="outline" size="sm" className="mt-2">
-                        Edit
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
